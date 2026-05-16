@@ -8,9 +8,11 @@ import com.mals.entity.AssetRequest;
 import com.mals.entity.User;
 import com.mals.enums.AssetStatus;
 import com.mals.enums.RequestStatus;
+import com.mals.enums.Role;
 import com.mals.exception.ResourceNotFoundException;
 import com.mals.repository.AssetRepository;
 import com.mals.repository.AssetRequestRepository;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -115,6 +117,28 @@ public class AssetRequestService {
 
         auditLogService.log(actor, "REQUEST_COMPLETED", "AssetRequest", id,
             "Assets returned: " + asset.getName(), ip);
+
+        return AssetRequestResponse.from(request);
+    }
+
+    /** Cancel a pending request. Requester can cancel their own; ADMIN can cancel any. */
+    public AssetRequestResponse cancel(Long id, User actor, String ip) {
+        AssetRequest request = getOrThrow(id);
+
+        if (request.getStatus() != RequestStatus.PENDING) {
+            throw new IllegalStateException("Only pending requests can be cancelled");
+        }
+        if (!request.getRequestedBy().getId().equals(actor.getId()) && actor.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("You can only cancel your own requests");
+        }
+
+        request.setStatus(RequestStatus.CANCELLED);
+        request.setProcessedAt(LocalDateTime.now());
+        request.setProcessedBy(actor);
+        request = requestRepository.save(request);
+
+        auditLogService.log(actor, "REQUEST_CANCELLED", "AssetRequest", id,
+            "Request cancelled by " + actor.getUsername(), ip);
 
         return AssetRequestResponse.from(request);
     }

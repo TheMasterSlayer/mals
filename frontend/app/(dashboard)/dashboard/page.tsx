@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Grid, Typography, Box, Button, Alert, Skeleton, Paper,
 } from '@mui/material';
 import {
   Inventory2, FlightTakeoff, Build, Warning,
-  Assignment, Groups, TrendingUp, Add,
+  Assignment, Groups, TrendingUp, Add, Refresh,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import StatsCard from '@/components/dashboard/StatsCard';
@@ -23,12 +23,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
     dashboardApi.getStats()
       .then(setStats)
       .catch(err => setError(getApiError(err)))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <Box>
@@ -43,6 +47,9 @@ export default function DashboardPage() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" startIcon={<Refresh />} onClick={load} disabled={loading}>
+            Refresh
+          </Button>
           <Button variant="outlined" startIcon={<Assignment />} onClick={() => router.push('/requests')}>
             Requests
           </Button>

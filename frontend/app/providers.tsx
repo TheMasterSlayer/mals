@@ -31,6 +31,25 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     if (saved === 'light' || saved === 'dark') setMode(saved);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    // When another tab logs out it clears the shared cookie. Re-sync it from
+    // this tab's sessionStorage whenever this tab regains focus so middleware
+    // doesn't redirect active sessions to /login.
+    const resyncCookie = () => {
+      if (document.visibilityState !== 'visible') return;
+      const token = sessionStorage.getItem('mals_token');
+      if (token) {
+        document.cookie = `mals_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+      }
+    };
+    document.addEventListener('visibilitychange', resyncCookie);
+    window.addEventListener('focus', resyncCookie);
+    return () => {
+      document.removeEventListener('visibilitychange', resyncCookie);
+      window.removeEventListener('focus', resyncCookie);
+    };
+  }, []);
+
   const colorMode = useMemo<ColorModeContextValue>(
     () => ({
       toggleColorMode: () => {

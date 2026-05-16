@@ -133,7 +133,7 @@ export default function AssetDetailPage() {
                 </Typography>
                 <Button
                   variant="text" size="small" sx={{ mt: 1 }}
-                  onClick={() => router.push('/map')}
+                  onClick={() => router.push(`/map?id=${asset.id}&lat=${asset.latitude}&lng=${asset.longitude}`)}
                 >
                   View on Map →
                 </Button>

@@ -31,7 +31,11 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        Map<String, Object> claims = new HashMap<>();
+        if (userDetails instanceof com.mals.entity.User user) {
+            claims.put("tv", user.getTokenVersion());
+        }
+        return generateToken(claims, userDetails);
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
@@ -46,7 +50,14 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        if (!username.equals(userDetails.getUsername()) || isTokenExpired(token)) {
+            return false;
+        }
+        if (userDetails instanceof com.mals.entity.User user) {
+            Integer tv = extractClaim(token, claims -> claims.get("tv", Integer.class));
+            return tv != null && tv == user.getTokenVersion();
+        }
+        return true;
     }
 
     private boolean isTokenExpired(String token) {

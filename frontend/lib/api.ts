@@ -25,10 +25,10 @@ export const apiClient = axios.create({
   timeout: 15_000,
 });
 
-// Attach JWT from localStorage on every request
+// Attach JWT from sessionStorage on every request
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('mals_token');
+    const token = sessionStorage.getItem('mals_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -41,8 +41,11 @@ apiClient.interceptors.response.use(
   res => res,
   (err: AxiosError) => {
     if (err.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('mals_token');
-      localStorage.removeItem('mals_user');
+      // Clear both sessionStorage AND the cookie — skipping the cookie means the
+      // middleware still sees it and bounces /login → /dashboard in an infinite loop.
+      sessionStorage.removeItem('mals_token');
+      sessionStorage.removeItem('mals_user');
+      document.cookie = 'mals_token=; path=/; max-age=0; SameSite=Lax';
       window.location.href = '/login';
     }
     return Promise.reject(err);
@@ -112,6 +115,9 @@ export const requestsApi = {
 
   complete: (id: number) =>
     apiClient.put<AssetRequest>(`/requests/${id}/complete`).then(r => r.data),
+
+  cancel: (id: number) =>
+    apiClient.put<AssetRequest>(`/requests/${id}/cancel`).then(r => r.data),
 };
 
 // ── Users ─────────────────────────────────────────────────────────────────────

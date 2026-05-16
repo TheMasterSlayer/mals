@@ -6,9 +6,12 @@ import com.mals.enums.RequestStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Repository
 public interface AssetRequestRepository extends JpaRepository<AssetRequest, Long> {
@@ -39,4 +42,10 @@ public interface AssetRequestRepository extends JpaRepository<AssetRequest, Long
     );
 
     long countByStatus(RequestStatus status);
+
+    boolean existsByAssetIdAndStatusIn(Long assetId, List<RequestStatus> statuses);
+
+    @Modifying
+    @Query("DELETE FROM AssetRequest r WHERE r.asset.id = :assetId")
+    void deleteByAssetId(@Param("assetId") Long assetId);
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useContext, useEffect } from 'react';
-import { Box, Toolbar, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Toolbar, useTheme, useMediaQuery, CircularProgress } from '@mui/material';
 import { useRouter, usePathname } from 'next/navigation';
 import Sidebar, { DRAWER_WIDTH } from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
@@ -23,17 +23,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isMobile  = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const { mode } = useContext(ColorModeContext);
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isInitialized } = useAuthStore();
   const router   = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isAuthenticated) router.push('/login');
-  }, [isAuthenticated, router]);
+    if (isInitialized && !isAuthenticated) router.push('/login');
+  }, [isAuthenticated, isInitialized, router]);
 
   const title = Object.entries(PAGE_TITLES).find(
     ([p]) => pathname.startsWith(p)
   )?.[1] ?? 'MALS';
+
+  if (!isInitialized) return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <CircularProgress />
+    </Box>
+  );
 
   if (!isAuthenticated) return null;
 

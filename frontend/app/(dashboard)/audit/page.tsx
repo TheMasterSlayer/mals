@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Box, Typography, Paper, Table, TableHead, TableRow,
   TableCell, TableBody, TableContainer, TablePagination,
-  TextField, Grid, Alert, CircularProgress, Chip, MenuItem,
+  TextField, Grid, Alert, CircularProgress, Chip, MenuItem, Button,
 } from '@mui/material';
+import { Refresh } from '@mui/icons-material';
 import { auditApi, getApiError } from '@/lib/api';
 import type { AuditLog } from '@/lib/types';
 import { format } from 'date-fns';
@@ -62,7 +63,12 @@ export default function AuditPage() {
 
   return (
     <Box>
-      <Typography variant="h5" fontWeight={700} mb={3}>Audit Log</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5" fontWeight={700}>Audit Log</Typography>
+        <Button variant="outlined" startIcon={<Refresh />} onClick={load} disabled={loading}>
+          Refresh
+        </Button>
+      </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 

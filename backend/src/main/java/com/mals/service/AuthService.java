@@ -58,6 +58,10 @@ public class AuthService {
         User user = userRepository.findByEmail(req.getEmail())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // Bump version to invalidate any existing sessions for this account
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        user = userRepository.save(user);
+
         String token = jwtService.generateToken(user);
 
         auditLogService.log(user, "USER_LOGIN", "User", user.getId(),

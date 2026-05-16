@@ -7,20 +7,25 @@ import com.mals.entity.Asset;
 import com.mals.entity.User;
 import com.mals.enums.AssetStatus;
 import com.mals.enums.AssetType;
+import com.mals.enums.RequestStatus;
 import com.mals.exception.ResourceNotFoundException;
 import com.mals.repository.AssetRepository;
+import com.mals.repository.AssetRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class AssetService {
 
-    private final AssetRepository  assetRepository;
-    private final AuditLogService  auditLogService;
+    private final AssetRepository        assetRepository;
+    private final AssetRequestRepository requestRepository;
+    private final AuditLogService        auditLogService;
 
     public AssetResponse create(CreateAssetRequest req, User actor, String ip) {
         Asset asset = Asset.builder()
@@ -80,6 +85,14 @@ public class AssetService {
 
     public void delete(Long id, User actor, String ip) {
         Asset asset = getOrThrow(id);
+
+        if (requestRepository.existsByAssetIdAndStatusIn(id,
+                List.of(RequestStatus.PENDING, RequestStatus.APPROVED))) {
+            throw new IllegalStateException(
+                "Cannot delete asset with active requests. Resolve all pending and approved requests first.");
+        }
+
+        requestRepository.deleteByAssetId(id);
         assetRepository.delete(asset);
         auditLogService.log(actor, "ASSET_DELETED", "Asset", id,
             "Deleted asset: " + asset.getName(), ip);

@@ -48,6 +48,11 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean enabled = true;
 
+    /** Incremented on each login — invalidates all previously issued JWTs for this user. */
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
+    private int tokenVersion = 0;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

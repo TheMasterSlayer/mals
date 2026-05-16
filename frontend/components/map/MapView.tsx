@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import type { CircleMarker as LeafletCircleMarker } from 'leaflet';
 import type { Asset, AssetStatus } from '@/lib/types';
 import 'leaflet/dist/leaflet.css';
 
@@ -13,22 +14,49 @@ const STATUS_COLORS: Record<AssetStatus, string> = {
   DECOMMISSIONED: '#64748B',
 };
 
-interface Props {
-  assets: Asset[];
+interface FlyToProps {
+  lat: number;
+  lng: number;
+  assetId: number;
+  markerRefs: React.MutableRefObject<Map<number, LeafletCircleMarker>>;
 }
 
-export default function MapView({ assets }: Props) {
+function FlyToMarker({ lat, lng, assetId, markerRefs }: FlyToProps) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo([lat, lng], 10, { duration: 1.2 });
+    // Open popup after the fly animation finishes
+    const timer = setTimeout(() => {
+      markerRefs.current.get(assetId)?.openPopup();
+    }, 1300);
+    return () => clearTimeout(timer);
+  }, [lat, lng, assetId, map, markerRefs]);
+  return null;
+}
+
+interface Props {
+  assets: Asset[];
+  focusId?: number;
+  focusLat?: number;
+  focusLng?: number;
+}
+
+export default function MapView({ assets, focusId, focusLat, focusLng }: Props) {
+  const markerRefs = useRef<Map<number, LeafletCircleMarker>>(new Map());
   const withCoords = assets.filter(a => a.latitude != null && a.longitude != null);
 
-  // Center on first asset or world center
-  const center: [number, number] = withCoords.length > 0
-    ? [withCoords[0].latitude!, withCoords[0].longitude!]
-    : [35, -80];
+  const center: [number, number] = focusLat != null && focusLng != null
+    ? [focusLat, focusLng]
+    : withCoords.length > 0
+      ? [withCoords[0].latitude!, withCoords[0].longitude!]
+      : [35, -80];
+
+  const initialZoom = focusLat != null ? 10 : 5;
 
   return (
     <MapContainer
       center={center}
-      zoom={5}
+      zoom={initialZoom}
       style={{ height: '540px', width: '100%' }}
     >
       <TileLayer
@@ -36,16 +64,21 @@ export default function MapView({ assets }: Props) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
+      {focusId != null && focusLat != null && focusLng != null && (
+        <FlyToMarker lat={focusLat} lng={focusLng} assetId={focusId} markerRefs={markerRefs} />
+      )}
+
       {withCoords.map(asset => (
         <CircleMarker
           key={asset.id}
+          ref={el => { if (el) markerRefs.current.set(asset.id, el); }}
           center={[asset.latitude!, asset.longitude!]}
-          radius={10}
+          radius={asset.id === focusId ? 14 : 10}
           pathOptions={{
             color: STATUS_COLORS[asset.status],
             fillColor: STATUS_COLORS[asset.status],
-            fillOpacity: 0.8,
-            weight: 2,
+            fillOpacity: asset.id === focusId ? 1 : 0.8,
+            weight: asset.id === focusId ? 3 : 2,
           }}
         >
           <Popup>

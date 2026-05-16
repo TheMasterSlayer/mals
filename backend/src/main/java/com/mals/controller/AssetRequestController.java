@@ -66,4 +66,14 @@ public class AssetRequestController {
     ) {
         return ResponseEntity.ok(requestService.complete(id, currentUser, httpRequest.getRemoteAddr()));
     }
+
+    /** Cancel a pending request (requester or ADMIN only). */
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<AssetRequestResponse> cancel(
+        @PathVariable Long id,
+        @AuthenticationPrincipal User currentUser,
+        HttpServletRequest httpRequest
+    ) {
+        return ResponseEntity.ok(requestService.cancel(id, currentUser, httpRequest.getRemoteAddr()));
+    }
 }

@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Box, Typography, Paper, Alert, CircularProgress, Chip,
-  List, ListItem, ListItemText, Divider,
+  List, ListItem, ListItemText, Divider, Button,
 } from '@mui/material';
+import { Refresh } from '@mui/icons-material';
 import { assetsApi, getApiError } from '@/lib/api';
 import type { Asset, AssetStatus } from '@/lib/types';
 import dynamic from 'next/dynamic';
@@ -28,16 +30,25 @@ const STATUS_COLORS: Record<AssetStatus, string> = {
 };
 
 export default function MapPage() {
+  const searchParams = useSearchParams();
+  const focusId  = searchParams.get('id')  ? Number(searchParams.get('id'))  : undefined;
+  const focusLat = searchParams.get('lat') ? Number(searchParams.get('lat')) : undefined;
+  const focusLng = searchParams.get('lng') ? Number(searchParams.get('lng')) : undefined;
+
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
     assetsApi.search({ size: 500 })
       .then(r => setAssets(r.content.filter(a => a.latitude != null && a.longitude != null)))
       .catch(err => setError(getApiError(err)))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const withCoords = assets.filter(a => a.latitude != null);
 
@@ -50,7 +61,10 @@ export default function MapPage() {
             {loading ? 'Loading...' : `${withCoords.length} assets with coordinates`}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Button variant="outlined" startIcon={<Refresh />} onClick={load} disabled={loading} size="small">
+            Refresh
+          </Button>
           {Object.entries(STATUS_COLORS).map(([status, color]) => (
             <Chip
               key={status}
@@ -71,7 +85,7 @@ export default function MapPage() {
               <CircularProgress />
             </Box>
           ) : (
-            <MapView assets={assets} />
+            <MapView assets={assets} focusId={focusId} focusLat={focusLat} focusLng={focusLng} />
           )}
         </Paper>
 

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Box, Typography, Paper, Grid, Button, Alert,
   Table, TableHead, TableRow, TableCell, TableBody,
   TableContainer, CircularProgress, Divider,
 } from '@mui/material';
-import { Download, PictureAsPdf } from '@mui/icons-material';
+import { Download, PictureAsPdf, Refresh } from '@mui/icons-material';
 import { assetsApi, getApiError } from '@/lib/api';
 import type { Asset } from '@/lib/types';
 import StatusChip from '@/components/common/StatusChip';
@@ -67,12 +67,16 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
     assetsApi.search({ size: 500 })
       .then(r => setAssets(r.content))
       .catch(err => setError(getApiError(err)))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   // Summary stats
   const byType   = assets.reduce<Record<string, number>>((acc, a) => ({ ...acc, [a.type]: (acc[a.type] ?? 0) + 1 }), {});
@@ -88,6 +92,9 @@ export default function ReportsPage() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" startIcon={<Refresh />} onClick={load} disabled={loading}>
+            Refresh
+          </Button>
           <Button
             variant="outlined"
             startIcon={<Download />}

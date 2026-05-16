@@ -15,6 +15,7 @@ function clearCookie() {
 interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   setUser: (user: AuthUser) => void;
   clearUser: () => void;
   initFromStorage: () => void;
@@ -23,35 +24,38 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
+  isInitialized: false,
 
   setUser: (user) => {
-    localStorage.setItem('mals_token', user.token);
-    localStorage.setItem('mals_user', JSON.stringify(user));
-    // Cookie lets the server-side middleware check auth without reading localStorage
+    // sessionStorage is per-tab so two simultaneous sessions don't overwrite each other
+    sessionStorage.setItem('mals_token', user.token);
+    sessionStorage.setItem('mals_user', JSON.stringify(user));
     setCookie(user.token);
     set({ user, isAuthenticated: true });
   },
 
   clearUser: () => {
-    localStorage.removeItem('mals_token');
-    localStorage.removeItem('mals_user');
+    sessionStorage.removeItem('mals_token');
+    sessionStorage.removeItem('mals_user');
     clearCookie();
     set({ user: null, isAuthenticated: false });
   },
 
   initFromStorage: () => {
     try {
-      const raw = localStorage.getItem('mals_user');
+      const raw = sessionStorage.getItem('mals_user');
       if (raw) {
         const user: AuthUser = JSON.parse(raw);
-        // Re-sync cookie in case it expired while localStorage is still valid
         setCookie(user.token);
-        set({ user, isAuthenticated: true });
+        set({ user, isAuthenticated: true, isInitialized: true });
+      } else {
+        set({ isInitialized: true });
       }
     } catch {
-      localStorage.removeItem('mals_user');
-      localStorage.removeItem('mals_token');
+      sessionStorage.removeItem('mals_user');
+      sessionStorage.removeItem('mals_token');
       clearCookie();
+      set({ isInitialized: true });
     }
   },
 }));

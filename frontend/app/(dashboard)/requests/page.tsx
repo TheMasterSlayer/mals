@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Typography, Button, Paper, Table, TableHead, TableRow,
   TableCell, TableBody, TableContainer, TablePagination,
@@ -8,7 +8,8 @@ import {
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
   DialogActions, Chip, Divider,
 } from '@mui/material';
-import { Add, CheckCircle, Cancel, Done, Refresh } from '@mui/icons-material';
+import { Add, CheckCircle, Cancel, Done, Refresh, Block } from '@mui/icons-material';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -59,7 +60,7 @@ export default function RequestsPage() {
   const [processNotes, setProcessNotes] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
@@ -83,11 +84,24 @@ export default function RequestsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openNewDialog = async () => {
+  const searchParams = useSearchParams();
+  const didAutoOpen = useRef(false);
+
+  const openNewDialog = async (preselectedAssetId?: number) => {
     const result = await assetsApi.search({ size: 200 });
     setAllAssets(result.content.filter(a => a.status !== 'DECOMMISSIONED'));
+    if (preselectedAssetId) setValue('assetId', preselectedAssetId);
     setNewOpen(true);
   };
+
+  useEffect(() => {
+    if (didAutoOpen.current) return;
+    const assetId = searchParams.get('assetId');
+    if (assetId) {
+      didAutoOpen.current = true;
+      openNewDialog(Number(assetId));
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreate = async (data: FormData) => {
     setSubmitting(true);
@@ -130,11 +144,20 @@ export default function RequestsPage() {
     }
   };
 
+  const handleCancel = async (id: number) => {
+    try {
+      await requestsApi.cancel(id);
+      load();
+    } catch (err) {
+      setError(getApiError(err));
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h5" fontWeight={700}>Mission Requests</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={openNewDialog}>
+        <Button variant="contained" startIcon={<Add />} onClick={() => openNewDialog()}>
           New Request
         </Button>
       </Box>
@@ -149,6 +172,8 @@ export default function RequestsPage() {
               select fullWidth label="Status" size="small"
               value={statusFilter}
               onChange={e => { setStatusFilter(e.target.value as RequestStatus | ''); setPage(0); }}
+              SelectProps={{ displayEmpty: true }}
+              InputLabelProps={{ shrink: true }}
             >
               {STATUSES.map(s => <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>)}
             </TextField>
@@ -245,6 +270,14 @@ export default function RequestsPage() {
                           </IconButton>
                         </Tooltip>
                       )}
+                      {req.status === 'PENDING' &&
+                        (req.requestedByUsername === user?.username || user?.role === 'ADMIN') && (
+                        <Tooltip title="Cancel Request">
+                          <IconButton size="small" color="warning" onClick={() => handleCancel(req.id)}>
+                            <Block fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -279,7 +312,8 @@ export default function RequestsPage() {
               <Grid item xs={8}>
                 <TextField
                   {...register('assetId')}
-                  select label="Asset *" fullWidth defaultValue=""
+                  select label="Asset *" fullWidth
+                  value={watch('assetId') ?? ''}
                   error={!!errors.assetId} helperText={errors.assetId?.message}
                 >
                   {allAssets.map(a => (
