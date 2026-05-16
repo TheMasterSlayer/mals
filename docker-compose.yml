@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: mals-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-mals_db}
+      POSTGRES_USER: ${DB_USERNAME:-mals_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mals_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-mals_user} -d ${DB_NAME:-mals_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mals-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mals-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-mals_db}
+      - DB_USERNAME=${DB_USERNAME:-mals_user}
+      - DB_PASSWORD=${DB_PASSWORD:-mals_password}
+      - JWT_SECRET=${JWT_SECRET:-mals-super-secret-jwt-key-change-this-in-production-32ch}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mals-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  mals-network:
+    driver: bridge

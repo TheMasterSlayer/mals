@@ -1,0 +1,37 @@
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Java / Maven ──────────────────────────────────────────────────────────────
+backend/target/
+backend/*.log
+backend/backend.log
+backend/backend-err.log
+*.class
+*.jar
+!backend/.mvn/wrapper/maven-wrapper.jar
+
+# ── Node / Next.js ───────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+frontend/frontend.log
+frontend/frontend-err.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+postgres_data/
