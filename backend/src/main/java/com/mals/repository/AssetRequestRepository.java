@@ -17,11 +17,21 @@ public interface AssetRequestRepository extends JpaRepository<AssetRequest, Long
 
     Page<AssetRequest> findByStatus(RequestStatus status, Pageable pageable);
 
-    @Query("""
-        SELECT r FROM AssetRequest r
-        WHERE (:status IS NULL OR r.status = :status)
-          AND (:userId IS NULL OR r.requestedBy.id = :userId)
-        """)
+    @Query(
+        value = """
+            SELECT r FROM AssetRequest r
+            LEFT JOIN FETCH r.requestedBy
+            LEFT JOIN FETCH r.asset
+            LEFT JOIN FETCH r.processedBy
+            WHERE (:status IS NULL OR r.status = :status)
+              AND (:userId IS NULL OR r.requestedBy.id = :userId)
+            """,
+        countQuery = """
+            SELECT COUNT(r) FROM AssetRequest r
+            WHERE (:status IS NULL OR r.status = :status)
+              AND (:userId IS NULL OR r.requestedBy.id = :userId)
+            """
+    )
     Page<AssetRequest> findFiltered(
         @Param("status") RequestStatus status,
         @Param("userId") Long userId,

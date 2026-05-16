@@ -11,12 +11,20 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
-    @Query("""
-        SELECT l FROM AuditLog l
-        WHERE (:action IS NULL OR :action = '' OR LOWER(l.action) LIKE LOWER(CONCAT('%', :action, '%')))
-          AND (:entityType IS NULL OR :entityType = '' OR l.entityType = :entityType)
-        ORDER BY l.timestamp DESC
-        """)
+    @Query(
+        value = """
+            SELECT l FROM AuditLog l
+            LEFT JOIN FETCH l.performedBy
+            WHERE (:action IS NULL OR :action = '' OR LOWER(l.action) LIKE LOWER(CONCAT('%', :action, '%')))
+              AND (:entityType IS NULL OR :entityType = '' OR l.entityType = :entityType)
+            ORDER BY l.timestamp DESC
+            """,
+        countQuery = """
+            SELECT COUNT(l) FROM AuditLog l
+            WHERE (:action IS NULL OR :action = '' OR LOWER(l.action) LIKE LOWER(CONCAT('%', :action, '%')))
+              AND (:entityType IS NULL OR :entityType = '' OR l.entityType = :entityType)
+            """
+    )
     Page<AuditLog> findFiltered(
         @Param("action")     String action,
         @Param("entityType") String entityType,
